@@ -1,3 +1,4 @@
+// components/DocuSignUploadForm.tsx
 import { useState } from 'react';
 
 type ApiResult = {
@@ -6,7 +7,7 @@ type ApiResult = {
   envelopeId?: string;
 } | null;
 
-export default function DocuSignForm() {
+const DocuSignForm = () => {
   const [tenantName, setTenantName] = useState('');
   const [tenantEmail, setTenantEmail] = useState('');
   const [tenantAddress, setTenantAddress] = useState('');
@@ -24,8 +25,7 @@ export default function DocuSignForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiResult>(null);
 
-  // --- SOLUSI: Definisikan style terpusat untuk semua input field ---
-  const inputStyle = "mt-1 block w-full px-3 py-2 border rounded-md text-black shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+  const inputStyle = "mt-1 block w-full px-3 py-2 border border-[var(--color-border)] rounded-full text-black focus:outline-none focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,7 +58,7 @@ export default function DocuSignForm() {
       setResult(data);
       
       if (data?.success) {
-        // Form reset logic can be added here
+        console.log("Success");
       }
     } catch (error) {
       setResult({ success: false, message: 'A network error occurred.' });
@@ -68,79 +68,145 @@ export default function DocuSignForm() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Rental Agreement Generator</h2>
+    <div className="max-w-2xl mx-auto mt-8 p-6 bg-[var(--color-background)]">
+      <h2 className="text-2xl font-bold mb-6 text-[var(--color-text)] text-center">Rental Agreement Generator</h2>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* Tenant Details */}
-        <fieldset className="border p-4 rounded-md">
+        <fieldset className="border border-[var(--color-border)] p-5 rounded-3xl">
           <legend className="text-lg font-semibold px-2 text-gray-700">Tenant Details</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <input className={inputStyle} value={tenantName} onChange={(e)=>setTenantName(e.target.value)} required />
+              <input
+                className={inputStyle}
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
+                placeholder="Enter full name"
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" className={inputStyle} value={tenantEmail} onChange={(e)=>setTenantEmail(e.target.value)} required />
+              <input
+                type="email"
+                className={inputStyle}
+                value={tenantEmail}
+                onChange={(e) => setTenantEmail(e.target.value)}
+                placeholder="example@mail.com"
+                required
+              />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">Current Address</label>
-              <input className={inputStyle} value={tenantAddress} onChange={(e)=>setTenantAddress(e.target.value)} required />
+              <input
+                className={inputStyle}
+                value={tenantAddress}
+                onChange={(e) => setTenantAddress(e.target.value)}
+                placeholder="Enter current address"
+                required
+              />
             </div>
           </div>
         </fieldset>
 
         {/* Owner Details */}
-        <fieldset className="border p-4 rounded-md">
+        <fieldset className="border border-[var(--color-border)] p-5 rounded-3xl">
           <legend className="text-lg font-semibold px-2 text-gray-700">Landlord Details</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <input className={inputStyle} value={ownerName} onChange={(e)=>setOwnerName(e.target.value)} required />
+              <input
+                className={inputStyle}
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="Enter full name"
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" className={inputStyle} value={ownerEmail} onChange={(e)=>setOwnerEmail(e.target.value)} required />
+              <input
+                type="email"
+                className={inputStyle}
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                placeholder="example@mail.com"
+                required
+              />
             </div>
-             <div className="md:col-span-2">
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">Address</label>
-              <input className={inputStyle} value={ownerAddress} onChange={(e)=>setOwnerAddress(e.target.value)} required />
+              <input
+                className={inputStyle}
+                value={ownerAddress}
+                onChange={(e) => setOwnerAddress(e.target.value)}
+                placeholder="Enter address"
+                required
+              />
             </div>
           </div>
         </fieldset>
         
         {/* Property & Rent Details */}
-        <fieldset className="border p-4 rounded-md">
-            <legend className="text-lg font-semibold px-2 text-gray-700">Property & Rent Details</legend>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">Property Address</label>
-                    <input className={inputStyle} value={propertyAddress} onChange={(e)=>setPropertyAddress(e.target.value)} required />
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input type="date" className={inputStyle} value={startDate} onChange={(e)=>setStartDate(e.target.value)} required />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Duration (days)</label>
-                    <input type="number" className={inputStyle} value={duration} onChange={(e)=>setDuration(e.target.value)} required />
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Total Rent Price</label>
-                    <input type="number" className={inputStyle} value={price} onChange={(e)=>setPrice(e.target.value)} required />
-                </div>
+        <fieldset className="border border-[var(--color-border)] p-5 rounded-3xl">
+          <legend className="text-lg font-semibold px-2 text-gray-700">Property & Rent Details</legend>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Property Address</label>
+              <input
+                className={inputStyle}
+                value={propertyAddress}
+                onChange={(e) => setPropertyAddress(e.target.value)}
+                placeholder="Enter property address"
+                required
+              />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Start Date</label>
+              <input
+                type="date"
+                className={inputStyle}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="Select start date"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Duration (days)</label>
+              <input
+                type="number"
+                className={inputStyle}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="Enter number of days"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Total Rent Price</label>
+              <input
+                type="number"
+                className={inputStyle}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Enter total rent price"
+                required
+              />
+            </div>
+          </div>
         </fieldset>
 
+        {/* Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+          className={`w-full flex justify-center p-5 rounded-full text-white
             ${isLoading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]' 
+              : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]'
             }`}
         >
           {isLoading ? 'Sending...' : 'Generate & Send for Signature'}
@@ -159,3 +225,5 @@ export default function DocuSignForm() {
     </div>
   );
 }
+
+export default DocuSignForm;

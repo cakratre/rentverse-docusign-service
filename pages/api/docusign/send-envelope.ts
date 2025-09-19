@@ -1,5 +1,4 @@
 // pages/api/docusign/send-envelope.ts
-
 import 'dotenv/config';
 import formidable from 'formidable';
 import fs from 'fs';
@@ -7,7 +6,6 @@ import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import docusign from 'docusign-esign';
 
-// ... (config dan type ApiResp tetap sama) ...
 export const config = {
   api: {
     bodyParser: false,
@@ -29,7 +27,6 @@ export default async function handler(
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  // Validasi environment variables
   const requiredEnvVars = ['DOCUSIGN_API_ACCOUNT_ID', 'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_USER_ID', 'DOCUSIGN_PRIVATE_KEY'];
   for (const varName of requiredEnvVars) {
     if (!process.env[varName]) {
@@ -44,7 +41,6 @@ export default async function handler(
 
     const getField = (name: string) => (fields[name] ? fields[name][0] : '');
 
-    // Mengambil semua data dari form
     const tenantName = getField('tenantName');
     const tenantEmail = getField('tenantEmail');
     const tenantAddress = getField('tenantAddress');
@@ -150,7 +146,6 @@ export default async function handler(
   }
 }
 
-// Fungsi getAccessToken tetap sama
 async function getAccessToken(): Promise<string> {
     const integrationKey = process.env.DOCUSIGN_INTEGRATION_KEY as string;
     const userId = process.env.DOCUSIGN_USER_ID as string;
