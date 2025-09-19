@@ -1,10 +1,10 @@
-// pages/api/docusign/send-envelope.ts
 import 'dotenv/config';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import docusign from 'docusign-esign';
+import { allowCors } from '@/utils/cors';
 
 export const config = {
   api: {
@@ -18,11 +18,7 @@ type ApiResp = {
   envelopeId?: string;
 };
 
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResp>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<ApiResp>) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
@@ -56,18 +52,15 @@ export default async function handler(
     const duration = getField('duration');
     const price = getField('price');
 
-    // Membaca file template
     const templatePath = path.resolve(process.cwd(), 'public/templates/templatePdf.pdf');
     const fileBuffer = fs.readFileSync(templatePath);
     const fileBase64 = fileBuffer.toString('base64');
 
-    // Inisialisasi Klien DocuSign
     const apiClient = new docusign.ApiClient();
     apiClient.setBasePath(process.env.DOCUSIGN_BASE_PATH || 'https://demo.docusign.net/restapi');
-    
     const accessToken = await getAccessToken();
     apiClient.addDefaultHeader('Authorization', 'Bearer ' + accessToken);
-    
+
     const envelopesApi = new docusign.EnvelopesApi(apiClient);
 
     const envelopeDefinition = {
@@ -80,18 +73,13 @@ export default async function handler(
       }],
       recipients: {
         signers: [
-          // Signer 1: Penyewa
           {
             email: tenantEmail,
             name: tenantName,
             recipientId: '1',
             routingOrder: '1',
             tabs: {
-              // --- SOLUSI: Hapus tab berbasis koordinat yang duplikat ---
-              // Hanya gunakan satu metode: anchorString.
-              signHereTabs: [
-                { anchorString: '//sig_tenant//' }
-              ],
+              signHereTabs: [{ anchorString: '//sig_tenant//' }],
               textTabs: [
                 { anchorString: '[Owner Name]', value: ownerName, locked: 'true' },
                 { anchorString: '[Owner Address]', value: ownerAddress, locked: 'true' },
@@ -108,36 +96,29 @@ export default async function handler(
               ]
             }
           },
-          // Signer 2: Pemilik
           {
             email: ownerEmail,
             name: ownerName,
             recipientId: '2',
             routingOrder: '1',
-            tabs: {
-              // --- SOLUSI: Hapus tab berbasis koordinat yang duplikat ---
-              // Hanya gunakan satu metode: anchorString.
-              signHereTabs: [
-                { anchorString: '//sig_owner//' }
-              ]
-            }
+            tabs: { signHereTabs: [{ anchorString: '//sig_owner//' }] }
           }
         ]
       },
       status: 'sent'
     };
-    
+
     const result = await envelopesApi.createEnvelope(
       process.env.DOCUSIGN_API_ACCOUNT_ID as string,
       { envelopeDefinition }
     );
-    
+
     res.status(200).json({
       success: true,
       envelopeId: result.envelopeId,
       message: 'Agreement sent successfully to all parties.'
     });
-    
+
   } catch (error: any) {
     const errBody = error?.response?.body;
     const errMsg = errBody?.message || 'An error occurred while sending the document.';
@@ -147,22 +128,23 @@ export default async function handler(
 }
 
 async function getAccessToken(): Promise<string> {
-    const integrationKey = process.env.DOCUSIGN_INTEGRATION_KEY as string;
-    const userId = process.env.DOCUSIGN_USER_ID as string;
-    const oauthBase = (process.env.DOCUSIGN_OAUTH_BASE_PATH || 'account-d.docusign.com');
+  const integrationKey = process.env.DOCUSIGN_INTEGRATION_KEY as string;
+  const userId = process.env.DOCUSIGN_USER_ID as string;
+  const oauthBase = (process.env.DOCUSIGN_OAUTH_BASE_PATH || 'account-d.docusign.com');
 
-    const apiClient = new docusign.ApiClient();
-    apiClient.setOAuthBasePath(oauthBase);
-    
-    const privateKeyPem = Buffer.from((process.env.DOCUSIGN_PRIVATE_KEY as string).replace(/\\n/g, '\n'));
+  const apiClient = new docusign.ApiClient();
+  apiClient.setOAuthBasePath(oauthBase);
 
-    const results = await apiClient.requestJWTUserToken(
-        integrationKey,
-        userId,
-        ['signature', 'impersonation'],
-        privateKeyPem,
-        3600
-    );
-    return results.body.access_token as string;
+  const privateKeyPem = Buffer.from((process.env.DOCUSIGN_PRIVATE_KEY as string).replace(/\\n/g, '\n'));
+
+  const results = await apiClient.requestJWTUserToken(
+    integrationKey,
+    userId,
+    ['signature', 'impersonation'],
+    privateKeyPem,
+    3600
+  );
+  return results.body.access_token as string;
 }
 
+export default allowCors(handler);

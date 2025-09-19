@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 4000",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start -p 4000"
   },
   "dependencies": {
     "@types/formidable": "^3.4.5",
     "@types/multer": "^2.0.0",
+    "cors": "^2.8.5",
     "docusign-esign": "^8.4.0",
     "dotenv": "^17.2.2",
     "formidable": "^3.5.4",
