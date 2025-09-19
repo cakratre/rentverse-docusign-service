@@ -11,6 +11,7 @@
     "@types/formidable": "^3.4.5",
     "@types/multer": "^2.0.0",
     "docusign-esign": "^8.4.0",
+    "dotenv": "^17.2.2",
     "formidable": "^3.5.4",
     "multer": "^2.0.2",
     "next": "15.5.3",
