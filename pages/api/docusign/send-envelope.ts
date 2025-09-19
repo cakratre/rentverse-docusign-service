@@ -1,108 +1,173 @@
+// pages/api/docusign/send-envelope.ts
+
+import 'dotenv/config';
 import formidable from 'formidable';
 import fs from 'fs';
+import path from 'path';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import docusign from 'docusign-esign';
 
+// ... (config dan type ApiResp tetap sama) ...
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-export default async function handler(req, res) {
+type ApiResp = {
+  success: boolean;
+  message: string;
+  envelopeId?: string;
+};
+
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResp>
+) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return res.status(405).json({ success: false, message: 'Method not allowed' });
+  }
+
+  // Validasi environment variables
+  const requiredEnvVars = ['DOCUSIGN_API_ACCOUNT_ID', 'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_USER_ID', 'DOCUSIGN_PRIVATE_KEY'];
+  for (const varName of requiredEnvVars) {
+    if (!process.env[varName]) {
+      console.error(`Missing required environment variable: ${varName}`);
+      return res.status(500).json({ success: false, message: 'Server configuration error.' });
+    }
   }
 
   try {
-    // Parse form data
     const form = formidable({});
-    const [fields, files] = await form.parse(req);
-    
-    const file = files.document[0];
-    const signerEmail = fields.signerEmail[0];
-    const signerName = fields.signerName[0];
-    
-    // Read file
-    const fileBuffer = fs.readFileSync(file.filepath);
+    const [fields] = await form.parse(req);
+
+    const getField = (name: string) => (fields[name] ? fields[name][0] : '');
+
+    // Mengambil semua data dari form
+    const tenantName = getField('tenantName');
+    const tenantEmail = getField('tenantEmail');
+    const tenantAddress = getField('tenantAddress');
+    const ownerName = getField('ownerName');
+    const ownerEmail = getField('ownerEmail');
+    const ownerAddress = getField('ownerAddress');
+    const propertyAddress = getField('propertyAddress');
+    const propertyType = getField('propertyType');
+    const size = getField('size');
+    const numberOfRoom = getField('numberOfRoom');
+    const furnished = getField('furnished').toLowerCase() === 'true';
+    const startDate = getField('startDate');
+    const duration = getField('duration');
+    const price = getField('price');
+
+    // Membaca file template
+    const templatePath = path.resolve(process.cwd(), 'public/templates/templatePdf.pdf');
+    const fileBuffer = fs.readFileSync(templatePath);
     const fileBase64 = fileBuffer.toString('base64');
-    
-    // Initialize DocuSign client
+
+    // Inisialisasi Klien DocuSign
     const apiClient = new docusign.ApiClient();
-    apiClient.setBasePath(process.env.DOCUSIGN_BASE_PATH);
+    apiClient.setBasePath(process.env.DOCUSIGN_BASE_PATH || 'https://demo.docusign.net/restapi');
     
-    // Get access token (simplified - dalam production gunakan proper OAuth flow)
     const accessToken = await getAccessToken();
     apiClient.addDefaultHeader('Authorization', 'Bearer ' + accessToken);
     
-    // Create envelope
     const envelopesApi = new docusign.EnvelopesApi(apiClient);
-    
-    const envelope = {
-      emailSubject: 'Mohon tanda tangan dokumen',
+
+    const envelopeDefinition = {
+      emailSubject: 'Action Required: Your Rental Agreement',
       documents: [{
         documentBase64: fileBase64,
-        name: file.originalFilename,
-        fileExtension: file.originalFilename.split('.').pop(),
+        name: 'Rental Agreement',
+        fileExtension: 'pdf',
         documentId: '1'
       }],
       recipients: {
-        signers: [{
-          email: signerEmail,
-          name: signerName,
-          recipientId: '1',
-          tabs: {
-            signHereTabs: [{
-              documentId: '1',
-              pageNumber: '1',
-              xPosition: '100',
-              yPosition: '100'
-            }]
+        signers: [
+          // Signer 1: Penyewa
+          {
+            email: tenantEmail,
+            name: tenantName,
+            recipientId: '1',
+            routingOrder: '1',
+            tabs: {
+              // --- SOLUSI: Hapus tab berbasis koordinat yang duplikat ---
+              // Hanya gunakan satu metode: anchorString.
+              signHereTabs: [
+                { anchorString: '//sig_tenant//' }
+              ],
+              textTabs: [
+                { anchorString: '[Owner Name]', value: ownerName, locked: 'true' },
+                { anchorString: '[Owner Address]', value: ownerAddress, locked: 'true' },
+                { anchorString: '[Tenant Name]', value: tenantName, locked: 'true' },
+                { anchorString: '[Tenant Address]', value: tenantAddress, locked: 'true' },
+                { anchorString: '[Property Address]', value: propertyAddress, locked: 'true' },
+                { anchorString: '[Property Type]', value: propertyType, locked: 'true' },
+                { anchorString: '[Size]', value: size, locked: 'true' },
+                { anchorString: '[Number of Rooms]', value: numberOfRoom, locked: 'true' },
+                { anchorString: '[Furnished Status]', value: furnished ? 'Yes' : 'No', locked: 'true' },
+                { anchorString: '[Start Date]', value: startDate, locked: 'true' },
+                { anchorString: '[Duration in Days]', value: duration, locked: 'true' },
+                { anchorString: '[Total Rental Price]', value: price, locked: 'true' },
+              ]
+            }
+          },
+          // Signer 2: Pemilik
+          {
+            email: ownerEmail,
+            name: ownerName,
+            recipientId: '2',
+            routingOrder: '1',
+            tabs: {
+              // --- SOLUSI: Hapus tab berbasis koordinat yang duplikat ---
+              // Hanya gunakan satu metode: anchorString.
+              signHereTabs: [
+                { anchorString: '//sig_owner//' }
+              ]
+            }
           }
-        }]
+        ]
       },
       status: 'sent'
     };
     
     const result = await envelopesApi.createEnvelope(
-      process.env.DOCUSIGN_ACCOUNT_ID,
-      { envelopeDefinition: envelope }
+      process.env.DOCUSIGN_API_ACCOUNT_ID as string,
+      { envelopeDefinition }
     );
-    
-    // Clean up temp file
-    fs.unlinkSync(file.filepath);
     
     res.status(200).json({
       success: true,
       envelopeId: result.envelopeId,
-      message: 'Dokumen berhasil dikirim untuk ditandatangani'
+      message: 'Agreement sent successfully to all parties.'
     });
     
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan saat mengirim dokumen'
-    });
+  } catch (error: any) {
+    const errBody = error?.response?.body;
+    const errMsg = errBody?.message || 'An error occurred while sending the document.';
+    console.error('DocuSign Error Body:', errBody || 'No response body from DocuSign.');
+    res.status(400).json({ success: false, message: errMsg });
   }
 }
 
-async function getAccessToken() {
-  // Implementasi JWT Grant untuk mendapatkan access token
-  // Atau gunakan Authorization Code Grant flow
-  // Ini contoh sederhana - dalam production harus lebih secure
-  
-  const apiClient = new docusign.ApiClient();
-  apiClient.setOAuthBasePath(process.env.DOCUSIGN_OAUTH_BASE_PATH);
-  
-  const privateKey = fs.readFileSync('path/to/your/private.key');
-  
-  const response = await apiClient.requestJWTUserToken(
-    process.env.DOCUSIGN_INTEGRATION_KEY,
-    process.env.DOCUSIGN_USER_ID,
-    ['signature'],
-    privateKey,
-    3600
-  );
-  
-  return response.body.access_token;
+// Fungsi getAccessToken tetap sama
+async function getAccessToken(): Promise<string> {
+    const integrationKey = process.env.DOCUSIGN_INTEGRATION_KEY as string;
+    const userId = process.env.DOCUSIGN_USER_ID as string;
+    const oauthBase = (process.env.DOCUSIGN_OAUTH_BASE_PATH || 'account-d.docusign.com');
+
+    const apiClient = new docusign.ApiClient();
+    apiClient.setOAuthBasePath(oauthBase);
+    
+    const privateKeyPem = Buffer.from((process.env.DOCUSIGN_PRIVATE_KEY as string).replace(/\\n/g, '\n'));
+
+    const results = await apiClient.requestJWTUserToken(
+        integrationKey,
+        userId,
+        ['signature', 'impersonation'],
+        privateKeyPem,
+        3600
+    );
+    return results.body.access_token as string;
 }
+
