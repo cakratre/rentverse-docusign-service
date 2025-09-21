@@ -36,4 +36,4 @@ Start the development server:
 npm run dev
 ```
 
-Open in your browser: [http://localhost:5173](http://localhost:5476)
+Open in your browser: [http://localhost:5476](http://localhost:5476)
